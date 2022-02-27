@@ -9,7 +9,7 @@ export async function createPNG(data: Uint8Array, dimensions: Dimensions) {
   for (let y = 0; y < height; ++y) {
     for (let x = 0; x < width * 4; ++x) {
       const idx = y * width * 4 + x
-      const idxNew = (height - y) * width * 4 + x
+      const idxNew = (height - 1 - y) * width * 4 + x
       buffer[idxNew] = data[idx]
     }
   }

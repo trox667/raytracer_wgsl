@@ -10,17 +10,27 @@ if (!device) {
   Deno.exit(1)
 }
 
+const aspect_ratio = 16.0 / 9.0
 const dimensions: Dimensions = {
-  width: 256,
-  height: 256,
+  width: 400,
+  height: Math.ceil(400 / aspect_ratio),
 }
+
+const viewport_height = 2
+const viewport_width = aspect_ratio * viewport_height
+const focal_length = 1
 
 const outputBuffer = createOutputBuffer(device, dimensions)
 const inputBuffer = createBufferInit(device, {
   label: 'InputBuffer',
   usage:
     GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-  contents: new Uint32Array([256, 256]).buffer,
+  contents: new Uint32Array([
+    dimensions.width,
+    dimensions.height,
+    viewport_width,
+    viewport_height,
+  ]).buffer,
 })
 
 const shaderModule = device.createShaderModule({
