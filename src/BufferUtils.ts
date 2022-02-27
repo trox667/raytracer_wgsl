@@ -46,15 +46,12 @@ export function createBufferInit(
   descriptor: BufferInit
 ): GPUBuffer {
   const contents = new Uint8Array(descriptor.contents)
-  const unpaddedSize = contents.byteLength
-  const padding = 4 - (unpaddedSize % 4)
-  const paddedSize = padding + unpaddedSize
 
   const buffer = device.createBuffer({
     label: descriptor.label,
     usage: descriptor.usage,
     mappedAtCreation: true,
-    size: paddedSize,
+    size: contents.byteLength,
   })
   const data = new Uint8Array(buffer.getMappedRange())
   data.set(contents)
