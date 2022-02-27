@@ -9,8 +9,10 @@ struct Input {
     viewport_height: u32;
 };
 
+// @group(0) @binding(0)
 [[group(0), binding(0)]]
 var<storage, read_write> outputBuffer: Data;
+// @group(0) @binding(1)
 [[group(0), binding(1)]]
 var<storage, read_write> inputData: Input;
 
@@ -24,23 +26,24 @@ fn ray_at(ray: Ray, t: f32) ->  vec3<f32> {
     return ray.origin + t * ray.direction;
 }
 
-fn hit_sphere(center: vec3<f32>, radius: f32, ray: Ray) -> bool {
+fn hit_sphere(center: vec3<f32>, radius: f32, ray: Ray) -> f32 {
     let oc = ray.origin - center;
     let a = dot(ray.direction, ray.direction);
     let b = 2.0 * dot(oc, ray.direction);
     let c = dot(oc, oc) - radius*radius;
     let discriminant = b * b - 4.0 * a * c;
-    if (discriminant > 0.0) {
-        return true;
+    if (discriminant < 0.0) {
+        return -1.0;
     } else {
-        return false;
+        return (-b - sqrt(discriminant)) / (2.0*a);
     }
-    return true;
 }
 
 fn ray_color(ray: Ray) -> vec3<f32> {
-    if (hit_sphere(vec3<f32>(0.0, 0.0, -1.0), 0.5, ray)) {
-        return vec3<f32>(1.0, 0.0, 0.0);
+    let t = hit_sphere(vec3<f32>(0.0, 0.0, -1.0), 0.5, ray);
+    if (t > 0.0) {
+        let n = normalize(ray_at(ray, t) - vec3<f32>(0.0, 0.0, -1.0));
+        return 0.5 * vec3<f32>(n.x + 1.0, n.y + 1.0, n.z + 1.0);
     }
     let unit_direction = normalize(ray.direction);
     let t = 0.5 * (unit_direction.y + 1.0);
@@ -51,8 +54,10 @@ fn write_color(color: vec3<f32>) -> u32 {
     return (255u << 24u) | (u32(255.999 * color.z) << 16u) | (u32(255.999*color.y) << 8u) | u32(255.999*color.x);
 }
 
-[[stage(compute), workgroup_size(1,1)]]
+// @stage(compute) @workgroup_size(8,8)
+[[stage(compute), workgroup_size(8,8)]]
 fn main([[builtin(global_invocation_id)]] global_id: vec3<u32>) {
+//fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (global_id.x >= inputData.width || global_id.y >= inputData.height) {
         return;
     }

@@ -63,7 +63,10 @@ const encoder = device.createCommandEncoder()
 const computePass = encoder.beginComputePass()
 computePass.setPipeline(computePipeline)
 computePass.setBindGroup(0, bindGroup)
-computePass.dispatch(dimensions.width, dimensions.height)
+computePass.dispatch(
+  Math.ceil(dimensions.width / 8),
+  Math.ceil(dimensions.height / 8)
+)
 computePass.endPass()
 
 device.queue.submit([encoder.finish()])
