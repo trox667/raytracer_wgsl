@@ -70,5 +70,6 @@ device.queue.submit([encoder.finish()])
 
 await outputBuffer.mapAsync(GPUMapMode.READ)
 const arrayBuffer = outputBuffer.getMappedRange()
+// console.log(new Uint8Array(arrayBuffer))
 await createPNG(new Uint8Array(arrayBuffer), dimensions)
 outputBuffer.unmap()
