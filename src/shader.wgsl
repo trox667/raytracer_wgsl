@@ -1,11 +1,20 @@
-[[stage(vertex)]]
-fn vs_main([[builtin(vertex_index)]] in_vertex_index: u32) -> [[builtin(position)]] vec4<f32> {
-    let x = f32(i32(in_vertex_index) - 1);
-    let y = f32(i32(in_vertex_index & 1u) * 2 - 1);
-    return vec4<f32>(x, y, 0.0, 1.0);
+struct Data {
+    data: array<u32>;
+};
+
+[[group(0), binding(0)]]
+var<storage, read_write> outputBuffer: Data;
+
+fn write_color(color: vec4<u32>) -> u32 {
+    return (color.w << 24u) | (color.z << 16u) | (color.y << 8u) | color.x;
 }
 
-[[stage(fragment)]]
-fn fs_main() -> [[location(0)]] vec4<f32> {
-    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+[[stage(compute), workgroup_size(1,1)]]
+fn main([[builtin(global_invocation_id)]] global_id: vec3<u32>) {
+    if (global_id.x >= 256u) {
+        return;
+    }
+    let idx = global_id.x;
+
+    outputBuffer.data[idx] = write_color(vec4<u32>(255u, 0u, 0u, 255u));
 }

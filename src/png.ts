@@ -1,25 +1,9 @@
-import { encode } from 'https://deno.land/x/pngs@0.1.1/mod.ts'
-import { Dimensions, getRowPadding } from './webgpu.ts'
+import { encode } from 'https://deno.land/x/pngs/mod.ts'
+import { Dimensions } from './types.ts'
 
-export async function createPNG(
-  buffer: GPUBuffer,
-  dimensions: Dimensions
-): Promise<void> {
-  await buffer.mapAsync(GPUMapMode.READ)
-  const inputBuffer = new Uint8Array(buffer.getMappedRange())
-  const { padded, unpadded } = getRowPadding(dimensions.width)
-  const outputBuffer = new Uint8Array(unpadded * dimensions.height)
-  for (let i = 0; i < dimensions.height; ++i) {
-    const slice = inputBuffer
-      .slice(i * padded, (i + 1) * padded)
-      .slice(0, unpadded)
-    outputBuffer.set(slice, i * unpadded)
-  }
+export async function createPNG(data: Uint8Array, dimensions: Dimensions) {
+  const { width, height } = dimensions
 
-  const image = encode(outputBuffer, dimensions.width, dimensions.height, {
-    stripAlpha: true,
-    color: 2,
-  })
-  Deno.writeFileSync('./output.png', image)
-  buffer.unmap()
+  const png = encode(data, width, height)
+  await Deno.writeFile('./output.png', png)
 }

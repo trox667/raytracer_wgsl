@@ -1,56 +1,55 @@
-import { copyToBuffer, Dimensions } from './webgpu.ts'
-import { createCapture } from './capture.ts'
 import { createPNG } from './png.ts'
-
-const dimensions: Dimensions = {
-  width: 200,
-  height: 200,
-}
+import { Dimensions } from './types.ts'
+import { createOutputBuffer } from './BufferUtils.ts'
 
 const adapter = await navigator.gpu.requestAdapter()
 const device = await adapter?.requestDevice()
 
 if (!device) {
-  console.error('Not able to request device')
+  console.error('Unable to request device')
   Deno.exit(1)
 }
+
+const dimensions: Dimensions = {
+  width: 256,
+  height: 256,
+}
+
+const outputBuffer = createOutputBuffer(device, dimensions)
 
 const shaderModule = device.createShaderModule({
   code: Deno.readTextFileSync(new URL('./shader.wgsl', import.meta.url)),
 })
-const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] })
-const renderPipeline = device.createRenderPipeline({
-  layout: pipelineLayout,
-  vertex: {
+
+const computePipeline = device.createComputePipeline({
+  compute: {
     module: shaderModule,
-    entryPoint: 'vs_main',
-  },
-  fragment: {
-    module: shaderModule,
-    entryPoint: 'fs_main',
-    targets: [
-      {
-        format: 'rgba8unorm-srgb',
-      },
-    ],
+    entryPoint: 'main',
   },
 })
 
-const { texture, outputBuffer } = createCapture(device, dimensions)
-const encoder = device.createCommandEncoder()
-const renderPass = encoder.beginRenderPass({
-  colorAttachments: [
+const bindGroupLayout = computePipeline.getBindGroupLayout(0)
+const bindGroup = device.createBindGroup({
+  layout: bindGroupLayout,
+  entries: [
     {
-      view: texture.createView(),
-      storeOp: 'store',
-      loadValue: [0, 1, 0, 1],
+      binding: 0,
+      resource: { buffer: outputBuffer },
     },
   ],
 })
-renderPass.setPipeline(renderPipeline)
-renderPass.draw(3, 1)
-renderPass.endPass()
-copyToBuffer(encoder, texture, outputBuffer, dimensions)
+
+const encoder = device.createCommandEncoder()
+const computePass = encoder.beginComputePass()
+computePass.setPipeline(computePipeline)
+computePass.setBindGroup(0, bindGroup)
+computePass.dispatch(dimensions.width * dimensions.height)
+computePass.endPass()
+
 device.queue.submit([encoder.finish()])
 
-await createPNG(outputBuffer, dimensions)
+await outputBuffer.mapAsync(GPUMapMode.READ)
+const arrayBuffer = outputBuffer.getMappedRange()
+console.log(new Uint8Array(arrayBuffer))
+await createPNG(new Uint8Array(arrayBuffer), dimensions)
+outputBuffer.unmap()
