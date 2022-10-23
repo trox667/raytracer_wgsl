@@ -1,7 +1,7 @@
-import { createPNG } from "./png.ts";
+// import { createPNG } from "./png.ts";
 import { Dimensions } from "./types.ts";
 import { createBufferInit, createOutputBuffer } from "./BufferUtils.ts";
-// import shaderWGSL from 'bundle-text:./shader.wgsl'
+import shaderWGSL from 'bundle-text:./shader.wgsl'
 
 const aspect_ratio = 16.0 / 9.0
 const width = 1024;
@@ -10,18 +10,11 @@ const dimensions: Dimensions = {
   width,
   height: Math.ceil(width / aspect_ratio),
 };
-
 async function init() {
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter?.requestDevice();
 
   if (device) {
-    const aspect_ratio = 16.0 / 9.0
-    // const aspect_ratio = 1.0;
-    const dimensions: Dimensions = {
-      width,
-      height: Math.ceil(width / aspect_ratio),
-    };
 
     const viewport_height = 2;
     const viewport_width = aspect_ratio * viewport_height;
@@ -41,8 +34,8 @@ async function init() {
     });
 
     const shaderModule = device.createShaderModule({
-      code: Deno.readTextFileSync(new URL("./shader.wgsl", import.meta.url)),
-      // code: shaderWGSL
+      // code: Deno.readTextFileSync(new URL("./shader.wgsl", import.meta.url)),
+      code: shaderWGSL
     });
 
     const computePipeline = device.createComputePipeline({
@@ -96,9 +89,21 @@ async function init() {
     await stagingBuffer.mapAsync(GPUMapMode.READ);
     const arrayBuffer = stagingBuffer.getMappedRange();
     console.log(new Uint8Array(arrayBuffer));
-    await createPNG(new Uint8Array(arrayBuffer), dimensions);
+    draw(new Uint8Array(arrayBuffer));
+    // await createPNG(new Uint8Array(arrayBuffer), dimensions);
     stagingBuffer.unmap();
   }
+}
+
+function draw(buffer: Uint8Array) {
+  const canvas = document.getElementById('canvas');
+  canvas?.setAttribute('width', dimensions.width)
+  canvas?.setAttribute('height', dimensions.height)
+
+  const ctx = (canvas as HTMLCanvasElement)?.getContext('2d')
+  const pixels = new Uint8ClampedArray(buffer);
+  const imageData = new ImageData(pixels, dimensions.width, dimensions.height);
+  ctx?.putImageData(imageData, 0, 0)
 }
 
 init().then(() => {});
